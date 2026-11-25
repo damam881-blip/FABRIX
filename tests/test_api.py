@@ -55,6 +55,39 @@ def test_health_and_catalog(client: TestClient):
     assert [p["id"] for p in products["items"][:3]] == [5, 6, 1]
 
 
+def test_catalog_filters_are_bounded_and_database_backed(client: TestClient):
+    from sqlalchemy import event
+    from backend.db import engine
+
+    statements: list[str] = []
+
+    def capture(_connection, _cursor, statement, _parameters, _context, _executemany):
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        response = client.get(
+            "/api/v1/products",
+            params={
+                "q": "scarf",
+                "category": "Textiles",
+                "min_price": 10,
+                "max_price": 100,
+                "in_stock": "true",
+                "page": 1,
+                "page_size": 2,
+            },
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["page_size"] == 2
+    assert payload["total"] >= len(payload["items"])
+    assert len(statements) <= 4
+    assert any("products" in statement.lower() and "where" in statement.lower() for statement in statements)
+
+
 def test_seed_accounts_login(client: TestClient):
     buyer = token_for(client, "buyer@example.com", "Demo12345")
     artisan = token_for(client, "artisan@example.com", "Demo12345")

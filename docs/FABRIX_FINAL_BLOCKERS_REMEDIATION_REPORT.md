@@ -21,8 +21,8 @@ remaining local issues that were safe and in scope:
 - Added Admin bootstrap audit logging.
 
 The local MVP is materially safer and more traceable, but it is **not declared
-fully ready** because product filtering still materializes catalog records in
-Python, legacy compatibility float columns remain during the migration period,
+fully ready** because managed upload replacement garbage collection and
+legacy compatibility-column cleanup remain,
 and production-only authentication/operational controls remain outside the
 local scope.
 
@@ -212,9 +212,10 @@ Implemented:
 - Relevant ownership/status/index fields remain indexed.
 - Pagination bounds remain capped.
 
-Remaining limitation: product catalog filtering still materializes the
-catalog before applying several Python filters. This is acceptable for the
-current 12-product local dataset but is not production-scale query behavior.
+Catalog filters now execute in SQL, with bounded stable pagination and a
+database-side count. JSON tag matching uses a SQLite text predicate because
+tags are stored as JSON arrays. A query-count regression test verifies the
+filtered endpoint stays bounded.
 
 ## 9. Audit logging
 
@@ -244,7 +245,7 @@ hardening item.
 | F-020 | FIXED AND VERIFIED for local scope | Ordered migration IDs, repeat-safe runner, isolated copy validation passed. |
 | F-027 | PARTIALLY FIXED | Core sensitive operations audited; immutable audit storage remains. |
 | F-028 | FIXED AND VERIFIED for canonical storage | Integer-cent migration and money regression passed; compatibility floats remain. |
-| F-029 | PARTIALLY FIXED | Limits and N+1 removal verified; catalog Python filtering remains. |
+| F-029 | FIXED AND VERIFIED for local scope | SQL filtering, stable pagination, limits, and recommendation N+1 removal verified by query-count and API tests. |
 | F-030 | PARTIALLY FIXED | Upload metadata, rollback, dry-run cleanup implemented; replacement GC remains. |
 | F-033 | FIXED AND VERIFIED for local foundation | Consent, deletion, retention, snapshot, provenance, and impression tests passed. |
 | F-035 | PARTIALLY FIXED | Expiration, active state, password handling, and throttling verified; MFA/reset/revocation remain. |
@@ -282,11 +283,10 @@ SQLite integrity checks, and file-backed concurrency tests.
 
 1. Compatibility float columns remain until a future API/schema major-version
    cleanup; canonical cents columns are authoritative now.
-2. Product filtering is not fully database-side.
-3. Upload replacement garbage collection is incomplete.
-4. MFA, password recovery, token revocation, and distributed throttling are
+2. Upload replacement garbage collection is incomplete.
+3. MFA, password recovery, token revocation, and distributed throttling are
    not local MVP requirements.
-5. Production monitoring, deployment secret rotation, disaster recovery, and
+4. Production monitoring, deployment secret rotation, disaster recovery, and
    real payment settlement are not implemented.
 
 ## 14. Final readiness decisions
@@ -313,5 +313,5 @@ secret management are not implemented.
 **NOT APPROVED TO START RECOMMENDATION IMPLEMENTATION**
 
 The local backend and recommendation foundation must reach READY after the
-remaining compatibility-column cleanup, database-side catalog filtering, and
-complete upload lifecycle are addressed.
+remaining compatibility-column cleanup and complete upload replacement
+lifecycle are addressed.

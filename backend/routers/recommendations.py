@@ -12,7 +12,7 @@ from ..db import get_db
 from ..deps import CurrentUser, DbSession, OptionalUser, require_admin
 from ..models import Product, RecommendationEvent, RecommendationDatasetSnapshot
 from ..schemas import Message, RecommendationEventIn, RecommendationList, RecommendationOut, RecommendationSnapshotOut
-from ..services import audit, cleanup_upload_orphans, create_recommendation_snapshot, product_is_eligible, purge_recommendation_events
+from ..services import audit, create_recommendation_snapshot, product_is_eligible, purge_recommendation_events
 from ..utils import utcnow
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])

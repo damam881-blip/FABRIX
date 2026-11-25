@@ -24,6 +24,36 @@ class Message(BaseModel):
     message: str
 
 
+class UploadCleanupItem(ORMModel):
+    path: str
+    relative_path: str
+    kind: str
+    reason: str
+
+
+class UploadCleanupReport(BaseModel):
+    message: str
+    dry_run: bool
+    candidate_count: int
+    candidates: list[UploadCleanupItem]
+    protected_count: int
+    protected: list[UploadCleanupItem]
+    broken_reference_count: int
+    broken_references: list[str]
+    legacy_reference_count: int
+    legacy_references: list[str]
+    stale_metadata_count: int
+    stale_metadata: list[UploadCleanupItem]
+    unresolvable_reference_count: int
+    unresolvable_references: list[str]
+    outside_root_count: int
+    outside_root: list[str]
+    deleted_count: int
+    deleted: list[str]
+    failed_count: int
+    failed: list[str]
+
+
 # ---------------------------------------------------------------------------
 # Identity, profile, addresses, notifications
 # ---------------------------------------------------------------------------

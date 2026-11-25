@@ -14,7 +14,13 @@ from ..db import get_db
 from ..deps import CurrentUser, DbSession, has_active_store, require_seller
 from ..models import Product, Store, UploadAsset, User
 from ..schemas import Message, ProductCreate, ProductList, ProductOut, ProductUpdate
-from ..services import audit, notify, product_is_eligible
+from ..services import (
+    audit,
+    cleanup_upload_orphans,
+    notify,
+    product_is_eligible,
+    upload_paths_for_references,
+)
 from ..utils import money_to_cents, slugify
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -364,6 +370,11 @@ async def upload_product_image(
 
     url = f"/assets/uploads/products/{product.id}/{filename}"
     previous_images = list(product.images or [])
+    obsolete_paths = (
+        upload_paths_for_references(db, UPLOAD_DIR, [previous_images, product.image])
+        if replace
+        else []
+    )
     images = [] if replace else previous_images
     images.append(url)
     product.images = images
@@ -388,31 +399,19 @@ async def upload_product_image(
     )
     try:
         db.commit()
-    except Exception:
+    except Exception as exc:
         db.rollback()
-        target.unlink(missing_ok=True)
-        raise
-    if replace:
-        referenced = {
-            image
-            for row in db.scalars(select(Product)).all()
-            for image in (row.images or [])
-        }
-        obsolete = [
-            row for row in db.scalars(
-                select(UploadAsset).where(UploadAsset.product_id == product.id)
-            ).all()
-            if f"/assets/uploads/products/{product.id}/" in row.path.replace("\\", "/")
-            and f"/assets/uploads/products/{product.id}/{Path(row.path).name}" not in referenced
-            and Path(row.path).resolve() != target.resolve()
-        ]
-        for asset in obsolete:
-            path = Path(asset.path)
-            try:
-                path.unlink(missing_ok=True)
-            except OSError:
-                continue
-            db.delete(asset)
-        db.commit()
+        try:
+            target.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Upload could not be committed",
+        ) from exc
+    if obsolete_paths:
+        cleanup_upload_orphans(
+            db, UPLOAD_DIR, user.id, dry_run=False, only_paths=obsolete_paths
+        )
     db.refresh(product)
     return ProductOut.model_validate(product)

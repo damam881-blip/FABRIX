@@ -18,9 +18,11 @@ from ..schemas import (
     StoreDecisionIn,
     StoreIn,
     StoreOut,
+    UploadCleanupItem,
+    UploadCleanupReport,
 )
 from ..services import audit, notify
-from ..services import cleanup_upload_orphans, upload_orphans
+from ..services import cleanup_upload_orphans
 from ..utils import round_money, utcnow
 from sqlalchemy import func
 
@@ -191,17 +193,39 @@ def audit_log(db: DbSession, limit: int = 100, _: User = Depends(require_admin))
     return AuditLogList(items=[AuditLogOut.model_validate(row) for row in rows], total=len(rows))
 
 
-@admin_router.post("/uploads/cleanup", response_model=Message)
+@admin_router.post("/uploads/cleanup", response_model=UploadCleanupReport)
 def cleanup_uploads(
     user: CurrentUser,
     db: DbSession,
     dry_run: bool = True,
     _=Depends(require_admin),
-) -> Message:
+) -> UploadCleanupReport:
     from .products import UPLOAD_DIR
 
-    if dry_run:
-        count = len(upload_orphans(db, UPLOAD_DIR))
-    else:
-        count = cleanup_upload_orphans(db, UPLOAD_DIR, user.id, dry_run=False)
-    return Message(message=f"{'Found' if dry_run else 'Deleted'} {count} orphan uploads")
+    report = cleanup_upload_orphans(db, UPLOAD_DIR, user.id, dry_run=dry_run)
+    verb = "Found" if report.dry_run else "Processed"
+    return UploadCleanupReport(
+        message=(
+            f"{verb} {len(report.candidates)} upload cleanup candidates; "
+            f"{len(report.deleted)} deleted, {len(report.failed)} failed"
+        ),
+        dry_run=report.dry_run,
+        candidate_count=len(report.candidates),
+        candidates=[UploadCleanupItem.model_validate(item) for item in report.candidates],
+        protected_count=len(report.protected),
+        protected=[UploadCleanupItem.model_validate(item) for item in report.protected],
+        broken_reference_count=len(report.broken_references),
+        broken_references=report.broken_references,
+        legacy_reference_count=len(report.legacy_references),
+        legacy_references=report.legacy_references,
+        stale_metadata_count=len(report.stale_metadata),
+        stale_metadata=[UploadCleanupItem.model_validate(item) for item in report.stale_metadata],
+        unresolvable_reference_count=len(report.unresolvable_references),
+        unresolvable_references=report.unresolvable_references,
+        outside_root_count=len(report.outside_root),
+        outside_root=report.outside_root,
+        deleted_count=len(report.deleted),
+        deleted=report.deleted,
+        failed_count=len(report.failed),
+        failed=report.failed,
+    )

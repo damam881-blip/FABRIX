@@ -338,6 +338,7 @@ async def upload_product_image(
     product_id: int,
     user: CurrentUser,
     db: DbSession,
+    replace: bool = False,
     file: UploadFile = File(...),
 ) -> ProductOut:
     product = _get_product(db, product_id)
@@ -362,10 +363,11 @@ async def upload_product_image(
     target.write_bytes(content)
 
     url = f"/assets/uploads/products/{product.id}/{filename}"
-    images = list(product.images or [])
+    previous_images = list(product.images or [])
+    images = [] if replace else previous_images
     images.append(url)
     product.images = images
-    if not product.image:
+    if replace or not product.image:
         product.image = url
     db.add(
         UploadAsset(
@@ -390,5 +392,27 @@ async def upload_product_image(
         db.rollback()
         target.unlink(missing_ok=True)
         raise
+    if replace:
+        referenced = {
+            image
+            for row in db.scalars(select(Product)).all()
+            for image in (row.images or [])
+        }
+        obsolete = [
+            row for row in db.scalars(
+                select(UploadAsset).where(UploadAsset.product_id == product.id)
+            ).all()
+            if f"/assets/uploads/products/{product.id}/" in row.path.replace("\\", "/")
+            and f"/assets/uploads/products/{product.id}/{Path(row.path).name}" not in referenced
+            and Path(row.path).resolve() != target.resolve()
+        ]
+        for asset in obsolete:
+            path = Path(asset.path)
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                continue
+            db.delete(asset)
+        db.commit()
     db.refresh(product)
     return ProductOut.model_validate(product)

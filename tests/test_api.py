@@ -532,6 +532,38 @@ def test_invalid_upload_is_rejected_without_product_mutation(client: TestClient)
     assert client.get("/api/v1/products/3").json()["images"] == before
 
 
+def test_managed_upload_replacement_removes_only_obsolete_asset(client: TestClient):
+    from backend.db import SessionLocal
+    from backend.models import UploadAsset
+
+    artisan = token_for(client, "artisan@example.com", "Demo12345")
+    png_one = b"\x89PNG\r\n\x1a\n" + b"first"
+    png_two = b"\x89PNG\r\n\x1a\n" + b"second"
+    first = client.post(
+        "/api/v1/products/3/images",
+        headers=auth(artisan),
+        files={"file": ("one.png", png_one, "image/png")},
+    )
+    assert first.status_code == 200, first.text
+    db = SessionLocal()
+    first_asset = db.query(UploadAsset).order_by(UploadAsset.id.desc()).first()
+    first_path = first_asset.path
+    db.close()
+    second = client.post(
+        "/api/v1/products/3/images?replace=true",
+        headers=auth(artisan),
+        files={"file": ("two.png", png_two, "image/png")},
+    )
+    assert second.status_code == 200, second.text
+    db = SessionLocal()
+    try:
+        assets = db.query(UploadAsset).filter(UploadAsset.product_id == 3).all()
+        assert len(assets) == 1
+        assert assets[0].path != first_path
+    finally:
+        db.close()
+
+
 def test_sqlite_foreign_keys_are_enabled():
     from sqlalchemy import text
     from sqlalchemy.exc import IntegrityError
@@ -622,3 +654,20 @@ def test_money_uses_integer_minor_units_and_rejects_fractional_cent(client: Test
         json={"name": "Fractional Cent", "price": 1.001, "stock": 1},
     )
     assert response.status_code == 422
+
+
+def test_legacy_float_compatibility_field_is_not_financial_authority():
+    from backend.db import SessionLocal
+    from backend.models import Product
+
+    db = SessionLocal()
+    product = db.get(Product, 2)
+    original_price = product.price
+    original_cents = product.price_cents
+    product.price = original_price + 0.01
+    db.commit()
+    db.refresh(product)
+    assert product.price_cents == original_cents
+    product.price = original_price
+    db.commit()
+    db.close()

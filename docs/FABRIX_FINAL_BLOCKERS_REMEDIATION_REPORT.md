@@ -16,13 +16,18 @@ remaining local issues that were safe and in scope:
   and exclusion counts.
 - Added user recommendation-data deletion/anonymization behavior.
 - Added accepted-impression acknowledgment semantics and tests.
-- Added upload metadata ownership and safe orphan cleanup support.
+- Added upload metadata ownership, managed replacement cleanup, and orphan
+  cleanup support.
 - Added bounded collection reads and removed recommendation-event N+1 lookups.
 - Added Admin bootstrap audit logging.
 
-The local MVP is materially safer and more traceable. Production-only
-authentication and operational controls are separated from local readiness
-below.
+The local MVP is materially safer and more traceable. An intermediate
+documentation-only consistency check found that the earlier upload readiness
+claim was broader than the automated evidence. The focused remediation recorded
+in Section 6 subsequently closed that gap with reference-safe cleanup, exact
+dry-run reporting, retry-safe deletion, and 17 dedicated regression tests.
+Production-only authentication and operational controls remain separated from
+local readiness below.
 
 ## 2. Database safety and migration evidence
 
@@ -166,20 +171,76 @@ The snapshot is a provenance foundation, not a training pipeline or algorithm.
 
 ## 6. Upload lifecycle
 
-`upload_assets` records product owner relationship, generated path, MIME type,
-size, SHA-256, and creation time. Generated paths remain product-scoped and
-randomized. Failed database commits remove the generated file.
+Implemented and inspected in `backend/routers/products.py`,
+`backend/services.py`, `backend/routers/sellers.py`, and `backend/schemas.py`,
+with dedicated regressions in `tests/test_upload_lifecycle.py`:
 
-Admin cleanup endpoint:
+- New uploads are validated by MIME type, suffix, byte size, and image
+  signature before any product mutation or database write.
+- Files are written to a randomized, product-scoped path under the canonical
+  root `assets/uploads/products/<product_id>/`.
+- `upload_assets` records product ownership, absolute path, MIME type, size,
+  SHA-256, and creation time.
+- Product image fields and upload metadata are staged in one database
+  transaction. If `db.commit()` fails, the transaction is rolled back, the new
+  file is unlinked, and the previous product image reference remains intact.
+- Replacement computes obsolete managed paths from the previous `Product.images`
+  and `Product.image` values before mutation, commits the new reference first,
+  then runs the shared cleanup restricted to those paths. Cleanup re-checks all
+  product references, so an image shared by another product or another image
+  entry is protected.
+- `inspect_upload_cleanup` normalizes `/assets/uploads/products/...` URLs,
+  absolute paths, and stored metadata paths; resolves them against the
+  canonical upload root; rejects traversal and outside-root references; and
+  classifies files without mutating disk or database state. Legacy
+  `/assets/photos/...` references are reported as `legacy_references` and are
+  preserved, not treated as upload-root escapes.
+- Cleanup distinguishes managed assets, valid referenced files, referenced
+  legacy files without metadata, unreferenced generated files, broken
+  references, stale metadata, unresolvable references, and outside-root
+  references. Files with unresolvable references are preserved by basename.
+- Every non-dry candidate is revalidated immediately before deletion. A failed
+  `unlink` retains its `UploadAsset` row for retry and records one
+  `upload.cleanup_failed` audit event. Successful deletion removes metadata and
+  records paths and counts in `upload.orphan_cleanup`.
+- `POST /api/v1/admin/uploads/cleanup?dry_run=true|false` returns exact
+  candidate paths, relative paths, kinds, reasons, and all classification and
+  action counts. Dry runs perform no file deletion and no metadata mutation.
+- Product deletion remains a soft unpublish; product images are not removed.
 
-`POST /api/v1/admin/uploads/cleanup?dry_run=true|false`
+The previous `upload_orphans` helper, which treated every file without an
+`upload_assets.path` match as deletable, was replaced by the shared
+classification and revalidation path.
 
-Dry runs report orphan files. Non-dry runs delete only files not referenced by
-valid upload metadata and create an audit record.
+### Dedicated automated coverage
 
-Invalid signatures remain rejected by the existing upload regression test.
-Full image replacement garbage collection remains a limitation: replacement
-cleanup should be added before production media retention is required.
+All tests below are in `tests/test_upload_lifecycle.py` and passed in a single
+run of `python -m pytest tests/test_upload_lifecycle.py -q`
+(**17 passed, 1 non-fatal deprecation warning**).
+
+| Scenario | Regression test | Result |
+|---|---|---|
+| Successful replacement removes only the obsolete managed file | `test_successful_replacement_removes_obsolete_managed_file` | Passed; new URL replaces the old one, old file and metadata are gone. |
+| Invalid image rejected before mutation | `test_invalid_image_rejected_without_product_mutation` | Passed; 400 response, product images and assets unchanged. |
+| Commit failure rolls back and cleans the new file | `test_commit_failure_during_replacement_rolls_back_and_cleans_new_file` | Passed with a monkeypatched commit failure; 500 response, no new file or metadata. |
+| Shared image used by another product | `test_shared_image_referenced_by_another_product_is_protected` | Passed; old file and metadata remain while product 3 advances. |
+| Shared image repeated in another product's image entries | `test_shared_image_referenced_by_another_image_entry_is_protected` | Passed; duplicate references protect the same file. |
+| Referenced legacy file without metadata preserved | `test_legacy_product_image_without_metadata_is_preserved` | Passed; classified as protected legacy, never a candidate. |
+| Unreferenced generated file classified correctly | `test_unreferenced_generated_file_is_classified_correctly` | Passed; absolute path, relative path, `legacy` kind, and `unreferenced_generated_file` reason reported without deletion in dry run. |
+| Valid managed upload preserved | `test_valid_managed_upload_is_not_classified_as_orphan` | Passed; protected as a managed product reference. |
+| True managed orphan detected and deleted | `test_true_managed_orphan_detection` | Passed; dry run identifies `managed` candidate, non-dry run removes file and metadata. |
+| Dry-run reports exact files and counts without mutation | `test_dry_run_reports_candidates_without_deleting_or_mutating` | Passed; repeated reports are identical, files/metadata/products unchanged, `deleted_count=0`. |
+| Safe non-dry deletion | `test_non_dry_cleanup_deletes_only_confirmed_safe_candidates` | Passed; two unreferenced files deleted, referenced file preserved. |
+| Failed deletion keeps retry capability | `test_failed_file_deletion_retains_retry_capability` | Passed with monkeypatched `OSError`; metadata retained and failure audited once. |
+| Retry after failed deletion succeeds | `test_retry_after_failed_deletion_succeeds` | Passed; second run deletes file and metadata with no repeated failure audit. |
+| Missing file with valid reference reported broken | `test_missing_file_with_valid_product_reference_is_reported_broken` | Passed; broken reference reported, stale metadata not deleted. |
+| Traversal and outside-root references rejected | `test_path_traversal_and_outside_root_references_are_ignored` | Passed; outside file and metadata preserved and reported as outside root. |
+| Soft unpublish preserves images | `test_soft_unpublish_keeps_product_images` | Passed; status becomes `Unpublished`, image reference and file remain. |
+| Cleanup is idempotent | `test_cleanup_is_idempotent` | Passed; second run has zero candidates, zero deletions, and no second cleanup audit. |
+
+Scope remains limited to local file lifecycle safety. Managed-upload cleanup on
+hard product deletion is intentionally not implemented because product deletion
+is a soft unpublish.
 
 ## 7. Authentication and authorization
 
@@ -244,16 +305,16 @@ hardening item.
 | F-027 | PARTIALLY FIXED | Core sensitive operations audited; immutable audit storage remains. |
 | F-028 | FIXED AND VERIFIED for canonical storage | Integer-cent migration and money regression passed; compatibility floats remain. |
 | F-029 | FIXED AND VERIFIED for local scope | SQL filtering, stable pagination, limits, and recommendation N+1 removal verified by query-count and API tests. |
-| F-030 | FIXED AND VERIFIED for local scope | Managed replacement, metadata ownership, rollback, dry-run cleanup, and obsolete-file deletion are covered by upload tests. |
+| F-030 | FIXED AND VERIFIED for local scope | Reference-safe classification, dry-run reporting, protected shared/legacy files, revalidated non-dry deletion, failed-deletion retry, and 17 dedicated regressions are implemented and passing. |
 | F-033 | FIXED AND VERIFIED for local foundation | Consent, deletion, retention, snapshot, provenance, and impression tests passed. |
 | F-035 | PARTIALLY FIXED | Expiration, active state, password handling, and throttling verified; MFA/reset/revocation remain. |
 | F-036 | DEFERRED WITH JUSTIFICATION | Deployment, monitoring, DR, and external credential controls are production-only. |
 
-All other F-001–F-014 and F-017–F-026, F-030–F-032, and F-034 findings retain
+All other F-001–F-014 and F-017–F-026, F-031–F-032, and F-034 findings retain
 their prior verified dispositions, with their regression evidence preserved in
 `tests/test_api.py` and `tests/test_sqlite_concurrency.py`.
 
-## 11. New findings addressed
+## 11. New findings addressed or recorded
 
 | Finding | Root cause | Remediation | Result |
 |---|---|---|---|
@@ -261,54 +322,96 @@ their prior verified dispositions, with their regression evidence preserved in
 | N-012 | Refund effects were represented only in mutable JSON details. | Added unique `refunds` records and integer amounts. | Cancellation/refund test passed. |
 | N-013 | No configurable recommendation retention operation. | Admin cleanup service and audit event. | Privacy/cleanup test passed. |
 | N-014 | No reproducible recommendation dataset manifest. | Snapshot model with watermark, criteria, taxonomy, and counts. | Snapshot test passed. |
-| N-015 | Upload paths lacked ownership metadata. | `upload_assets` table and safe orphan cleanup. | Schema migration passed; invalid-upload regression passed. |
+| N-015 | Upload paths lacked ownership metadata. | `upload_assets` table and orphan cleanup support. | Schema migration passed; invalid-upload and ownership regressions passed. |
+| N-016 | Orphan detection relied only on `upload_assets.path`, and failure/shared/dry-run/retry paths lacked dedicated tests. | Added canonical reference resolution, product-reference protection, legacy/traversal classification, exact dry-run reporting, revalidated deletion, retained metadata on failure, and 17 dedicated regressions. | CLOSED AND VERIFIED; no longer blocks local backend READY. |
 
 ## 12. Exact commands and results
 
 | Command | Result |
 |---|---|
-| `python -m pytest -q` | **26 passed, 0 failed, 0 skipped**, exit 0 |
-| `python -m compileall -q backend scripts start.py` | Passed, exit 0 |
-| `python scripts/validate_db_copy.py <backup> <copy>` | Integrity ok, foreign-key check ok, foreign keys 1, five migrations, exit 0 |
+| `python -m pytest tests/test_upload_lifecycle.py -q` | **17 passed**, 1 non-fatal deprecation warning, exit 0 |
+| `python -m pytest -q` | **43 passed, 0 failed, 0 skipped**, 5 non-fatal Starlette/httpx deprecation warnings, exit 0 (`43 passed in 26.22s`) |
 | `python -m pytest tests/test_sqlite_concurrency.py -q` | 2 passed, 0 failed, exit 0 |
-| `python scripts/verify_assets.py` | 16 pages and 12/12 local photos, exit 0 |
+| `python -m compileall -q backend tests scripts start.py` | Passed, exit 0 |
+| `python scripts/validate_db_copy.py data/fabrix.db C:/Users/HP/AppData/Local/Temp/opencode/fabrix_final_upload_validation_20261125_1.db` | `integrity_check=ok`, `foreign_key_check=ok`, `foreign_keys=1`, five migrations, exit 0 |
+| Active `data/fabrix.db` direct check | `active_integrity ok`, `active_fk []`, `upload_assets 0` |
+| `python scripts/verify_assets.py` | `FABRIX OK: 16 pages; 12/12 locally downloaded photos`, exit 0 |
 
 The final full suite includes API security/workflow tests, money conversion,
 refund/inventory consistency, consent/deletion/snapshot/impression tests,
-SQLite integrity checks, and file-backed concurrency tests.
+SQLite integrity checks, file-backed concurrency tests, and all 17 upload
+lifecycle regressions.
 
 ## 13. Remaining limitations
 
 1. Compatibility float columns remain for API compatibility; the dedicated
    regression test proves they are non-authoritative.
-2. MFA, password recovery, token revocation, and distributed throttling are
+2. Product deletion is a soft unpublish and does not perform managed-upload
+   cleanup; this preserves valid image references by design.
+3. MFA, password recovery, token revocation, and distributed throttling are
    not local MVP requirements.
-3. Production monitoring, deployment secret rotation, disaster recovery, and
+4. Production monitoring, deployment secret rotation, disaster recovery, and
    real payment settlement are not implemented.
 
-## 14. Final readiness decisions
+## 14. Git history and local version control
 
-### A. Local Backend and Recommendation Foundation Readiness
+Branch: `work/fabrix-final-local-mvp-readiness`. The repository was initialized
+locally at the project root; the baseline branch is `main`.
+
+| Commit | Message |
+|---|---|
+| `5c2000946bc439ac5311c43a036a5678acd7f23f` | `chore(git): establish FABRIX local baseline` |
+| `6b62bc8379c50d837f3d51bb2482a3786963165e` | `perf(catalog): verify database-side filtering` |
+| `ddb7ce179ae4f03b3f569a03ddc179902eeba14a` | `fix(uploads): complete managed replacement lifecycle` |
+| `7e85c32791f2497e8b0b0670efd7c4107ad731f6` | `docs(readiness): record local MVP approval evidence` |
+| `8a2c3a1d61fcecd01f2c4822b9d1a5a67e1e867a` | `fix(uploads): make cleanup reference-safe and retryable` |
+
+Implementation and tests were committed first; the final report update is a
+separate local commit. This report intentionally does not record its own commit
+hash. Final Git status after both commits is clean. No remote is configured
+(`git remote -v` is empty). `git ls-files` contains no active SQLite database,
+database backup, uploaded file, `.env` secret, credential, or
+virtual-environment artifact. No push, force push, publish, tag, release, or
+deployment was performed.
+
+## 15. Final readiness decisions
+
+### A. Local Backend Security and Integrity
+
+**READY for the local MVP**
+
+The upload lifecycle gap that previously blocked this decision is closed:
+cleanup now protects referenced legacy and shared files, rejects traversal and
+outside-root references, reports exact dry-run candidates without mutation,
+revalidates candidates before deletion, retains metadata after failed deletion
+for retry, and is covered by 17 dedicated passing regressions. The full 43-test
+suite, concurrency tests, compilation, database validation, and asset
+verification also pass. This decision is scoped to the local MVP; it does not
+claim production hardening.
+
+### B. Recommendation Data Foundation
 
 **READY**
 
-The local security, integrity, money, payment, recommendation-event, catalog,
-and managed-upload paths have dedicated regression evidence. Compatibility
-float fields are retained only for API compatibility and are proven
-non-authoritative.
+The recommendation event taxonomy, server-only purchase events, stable IDs,
+consent filtering, user deletion, configurable retention, snapshot lineage,
+eligibility checks, and impression acknowledgment remain supported by the
+passing tests.
 
-### B. Production Readiness
+### C. Recommendation Implementation
+
+**APPROVED TO START**
+
+Approval requires both a ready local backend and a ready recommendation data
+foundation. Both conditions are now met. This approves local implementation
+work only; it does not deploy, publish, or change payment, authentication, or
+recommendation behavior.
+
+### D. Production Readiness
 
 **NOT READY**
 
-Production monitoring, deployment controls, MFA, distributed abuse
-protection, disaster recovery, real payment reconciliation, and operational
-secret management are not implemented.
-
-### C. Recommendation implementation decision
-
-**APPROVED TO START RECOMMENDATION IMPLEMENTATION**
-
-This approval is limited to the local MVP foundation. It does not approve
-production deployment, real payments, or production-scale recommendation
-operations.
+Production monitoring, deployment controls, MFA, distributed abuse protection,
+disaster recovery, real payment reconciliation, and operational secret
+management are not implemented. These remain production-only requirements and
+are not the reason the local backend decision changed.

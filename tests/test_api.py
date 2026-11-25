@@ -48,8 +48,12 @@ def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_health_and_catalog(client: TestClient):
+def test_health_frontend_pages_and_catalog(client: TestClient):
     assert client.get("/health").json()["status"] == "ok"
+    for path in ("/", "/index.html", "/recommendations.html"):
+        response = client.get(path)
+        assert response.status_code == 200, (path, response.text[:200])
+        assert "<html" in response.text.lower()
     products = client.get("/api/v1/products").json()
     assert products["total"] == 12
     assert [p["id"] for p in products["items"][:3]] == [5, 6, 1]

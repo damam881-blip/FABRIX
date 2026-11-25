@@ -123,7 +123,7 @@ for module in (sellers, reviews):
 app.include_router(recommendations.admin_router, prefix=API_PREFIX)
 
 
-def _serve_page(filename: str):
+def _serve_page(filename: str = "index.html"):
     return FileResponse(ROOT / filename)
 
 

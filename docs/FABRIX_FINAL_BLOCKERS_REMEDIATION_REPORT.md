@@ -20,11 +20,9 @@ remaining local issues that were safe and in scope:
 - Added bounded collection reads and removed recommendation-event N+1 lookups.
 - Added Admin bootstrap audit logging.
 
-The local MVP is materially safer and more traceable, but it is **not declared
-fully ready** because managed upload replacement garbage collection and
-legacy compatibility-column cleanup remain,
-and production-only authentication/operational controls remain outside the
-local scope.
+The local MVP is materially safer and more traceable. Production-only
+authentication and operational controls are separated from local readiness
+below.
 
 ## 2. Database safety and migration evidence
 
@@ -246,7 +244,7 @@ hardening item.
 | F-027 | PARTIALLY FIXED | Core sensitive operations audited; immutable audit storage remains. |
 | F-028 | FIXED AND VERIFIED for canonical storage | Integer-cent migration and money regression passed; compatibility floats remain. |
 | F-029 | FIXED AND VERIFIED for local scope | SQL filtering, stable pagination, limits, and recommendation N+1 removal verified by query-count and API tests. |
-| F-030 | PARTIALLY FIXED | Upload metadata, rollback, dry-run cleanup implemented; replacement GC remains. |
+| F-030 | FIXED AND VERIFIED for local scope | Managed replacement, metadata ownership, rollback, dry-run cleanup, and obsolete-file deletion are covered by upload tests. |
 | F-033 | FIXED AND VERIFIED for local foundation | Consent, deletion, retention, snapshot, provenance, and impression tests passed. |
 | F-035 | PARTIALLY FIXED | Expiration, active state, password handling, and throttling verified; MFA/reset/revocation remain. |
 | F-036 | DEFERRED WITH JUSTIFICATION | Deployment, monitoring, DR, and external credential controls are production-only. |
@@ -269,7 +267,7 @@ their prior verified dispositions, with their regression evidence preserved in
 
 | Command | Result |
 |---|---|
-| `python -m pytest -q` | **23 passed, 0 failed, 0 skipped**, exit 0 |
+| `python -m pytest -q` | **26 passed, 0 failed, 0 skipped**, exit 0 |
 | `python -m compileall -q backend scripts start.py` | Passed, exit 0 |
 | `python scripts/validate_db_copy.py <backup> <copy>` | Integrity ok, foreign-key check ok, foreign keys 1, five migrations, exit 0 |
 | `python -m pytest tests/test_sqlite_concurrency.py -q` | 2 passed, 0 failed, exit 0 |
@@ -281,24 +279,23 @@ SQLite integrity checks, and file-backed concurrency tests.
 
 ## 13. Remaining limitations
 
-1. Compatibility float columns remain until a future API/schema major-version
-   cleanup; canonical cents columns are authoritative now.
-2. Upload replacement garbage collection is incomplete.
-3. MFA, password recovery, token revocation, and distributed throttling are
+1. Compatibility float columns remain for API compatibility; the dedicated
+   regression test proves they are non-authoritative.
+2. MFA, password recovery, token revocation, and distributed throttling are
    not local MVP requirements.
-4. Production monitoring, deployment secret rotation, disaster recovery, and
+3. Production monitoring, deployment secret rotation, disaster recovery, and
    real payment settlement are not implemented.
 
 ## 14. Final readiness decisions
 
 ### A. Local Backend and Recommendation Foundation Readiness
 
-**NOT READY**
+**READY**
 
-The core local controls and data foundation are implemented and tested, but the
-remaining compatibility money columns, catalog query materialization, and
-upload replacement lifecycle prevent a clean “no unresolved in-scope
-limitation” declaration.
+The local security, integrity, money, payment, recommendation-event, catalog,
+and managed-upload paths have dedicated regression evidence. Compatibility
+float fields are retained only for API compatibility and are proven
+non-authoritative.
 
 ### B. Production Readiness
 
@@ -310,8 +307,8 @@ secret management are not implemented.
 
 ### C. Recommendation implementation decision
 
-**NOT APPROVED TO START RECOMMENDATION IMPLEMENTATION**
+**APPROVED TO START RECOMMENDATION IMPLEMENTATION**
 
-The local backend and recommendation foundation must reach READY after the
-remaining compatibility-column cleanup and complete upload replacement
-lifecycle are addressed.
+This approval is limited to the local MVP foundation. It does not approve
+production deployment, real payments, or production-scale recommendation
+operations.

@@ -73,7 +73,7 @@ The release report is committed separately after verification.
 | Before | `main` | `ed93d5e403a823222a78f36109616657d297b8ba` |
 | After | `main` | `b21fd7c3f1c3398f1595f13831aa8e42dd699a5b` |
 
-Final remote confirmation:
+Remote confirmation after the implementation/documentation push:
 
 ```text
 ref: refs/heads/main    HEAD
@@ -87,6 +87,17 @@ The normal push output was:
 To https://github.com/damam881-blip/FABRIX.git
    ed93d5e..b21fd7c  main -> main
 ```
+
+The release report was then committed as
+`da3434cb6c2d691836009f92de9611f5d0360a2f` and pushed normally:
+
+```text
+To https://github.com/damam881-blip/FABRIX.git
+   b21fd7c..da3434c  main -> main
+```
+
+That commit and any subsequent correction to this report are documentation-only;
+application and test source are identical to the verified clone state below.
 
 ### Pull request
 
@@ -129,7 +140,8 @@ are missing. Remaining future work is described as future work.
 
 ## 5. Fresh-clone and isolated initialization test
 
-A clean clone was created from GitHub `main` after the final push:
+A clean clone was created from GitHub `main` after the implementation and
+documentation push:
 
 ```powershell
 git clone https://github.com/damam881-blip/FABRIX.git C:/Users/HP/AppData/Local/Temp/opencode/fabrix_fresh_clone_final_20261126_2
@@ -143,6 +155,22 @@ Result:
 ```text
 ## main...origin/main
 b21fd7c3f1c3398f1595f13831aa8e42dd699a5b
+```
+
+A second clean clone was taken after the documentation-only release report
+commit `da3434cb6c2d691836009f92de9611f5d0360a2f` at
+`C:/Users/HP/AppData/Local/Temp/opencode/fabrix_final_clone_release_20261126_3`.
+Running the same startup workflow on isolated ports and database produced:
+
+```text
+health=200
+/ status=200
+/docs status=200
+/api/v1/recommendations?limit=3 status=200
+integrity_check=ok
+migrations=['integrity_triggers_v1', 'money_minor_units_v1', 'payments_idempotency_v1', 'recommendation_event_context_v1', 'sqlite_foreign_keys_v1']
+users=8
+products=12
 ```
 
 The exact documented quick start is:

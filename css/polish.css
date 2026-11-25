@@ -1,0 +1,35 @@
+/* FABRIX v6.1 — shared visual and accessibility polish */
+:root{--focus-ring:#506754;--ease-smooth:cubic-bezier(.2,.7,.2,1)}
+html{scroll-padding-top:24px}
+body{overflow-x:hidden}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:3px solid var(--focus-ring)!important;outline-offset:3px!important}
+:where(a,button,input,select,textarea){-webkit-tap-highlight-color:transparent}
+:where(button,.btn,.app-btn,.text-link,.category-card,.product-card,.app-panel,.action){transition:background-color .2s var(--ease-smooth),border-color .2s var(--ease-smooth),color .2s var(--ease-smooth),transform .2s var(--ease-smooth),box-shadow .2s var(--ease-smooth)}
+:where(.app-btn,.btn,.newsletter-form button):active{transform:translateY(1px)}
+:where(.app-panel,.app-kpi,.app-product){box-shadow:0 2px 6px #25221b08}
+.app-panel:hover{border-color:#bfbcb2}
+.product-card:hover .product-visual,.app-product:hover .app-card-visual{box-shadow:0 14px 34px #26251f17}
+.product-card:hover .product-title{text-decoration:underline;text-underline-offset:3px}
+:where(input,textarea,select)::placeholder{color:#87857f;opacity:1}
+:where(input,textarea,select):disabled{opacity:.55;cursor:not-allowed}
+.app-form :where(input,textarea,select):focus{border-color:var(--focus-ring);box-shadow:0 0 0 3px #50675418}
+.app-table tbody tr:hover{background:#f4f3ee}
+.app-nav a[aria-current=page]{font-weight:700}
+.skip-to-content{position:fixed;left:14px;top:12px;z-index:400;background:#1d1d1b;color:white;padding:12px 18px;border-radius:999px;transform:translateY(-150%);font-weight:700}
+.skip-to-content:focus{transform:translateY(0)}
+.back-to-top{position:fixed;bottom:22px;right:22px;z-index:80;width:43px;height:43px;border:1px solid #c8c5bb;background:#fff;color:#252520;border-radius:50%;box-shadow:0 10px 30px #24231f25;display:grid;place-items:center;opacity:0;visibility:hidden;transform:translateY(10px);font-size:20px}
+.back-to-top.visible{opacity:1;visibility:visible;transform:translateY(0)}
+.back-to-top:hover{background:#24251f;color:white;border-color:#24251f}
+@media(max-width:720px){
+  .app-main{padding:36px 0 65px}
+  .app-hero{align-items:start;flex-direction:column}
+  .app-panel{padding:19px}
+  .app-row{flex-wrap:wrap}
+  .app-btn{min-height:44px}
+  .app-table-wrap{margin-inline:-8px;width:calc(100% + 16px)}
+  .back-to-top{bottom:14px;right:14px}
+  .search{flex:1 0 100%}
+  .nav-links a{padding:7px 0}
+}
+@media(max-width:420px){.app-cols{grid-template-columns:1fr}.app-grid,.app-two{grid-template-columns:1fr}.app-panel{border-radius:14px}.app-hero h1{font-size:36px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}

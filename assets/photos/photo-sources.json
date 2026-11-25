@@ -1,0 +1,114 @@
+[
+  {
+    "product_id": 1,
+    "product_name": "Sculpted arch earrings",
+    "photo_id": 12194361,
+    "source_page": "https://www.pexels.com/photo/a-pair-of-gold-earrings-12194361/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 2,
+    "product_name": "Ribbed beeswax candle",
+    "photo_id": 11434947,
+    "source_page": "https://www.pexels.com/photo/a-close-up-shot-of-beeswax-candles-11434947/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 3,
+    "product_name": "Hand-knit pebble scarf",
+    "photo_id": 5603268,
+    "source_page": "https://www.pexels.com/photo/close-up-of-knitted-clothing-5603268/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 4,
+    "product_name": "Botanical linen hoop",
+    "photo_id": 10816966,
+    "source_page": "https://www.pexels.com/photo/embroidered-leaves-on-a-cloth-and-candles-10816966/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 5,
+    "product_name": "Cloudline ceramic vase",
+    "photo_id": 6568984,
+    "source_page": "https://www.pexels.com/photo/white-ceramic-vase-in-close-up-photography-6568984/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category",
+    "alternate_photo_ids": [
+      31493661,
+      28486205
+    ]
+  },
+  {
+    "product_id": 6,
+    "product_name": "Woven ember wall piece",
+    "photo_id": 13211211,
+    "source_page": "https://www.pexels.com/photo/handmade-macrame-13211211/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 7,
+    "product_name": "Hand-thrown cup set",
+    "photo_id": 32877675,
+    "source_page": "https://www.pexels.com/photo/collection-of-handmade-ceramic-vases-in-workshop-32877675/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "approximate"
+  },
+  {
+    "product_id": 8,
+    "product_name": "Hammered silver pendant",
+    "photo_id": 13595442,
+    "source_page": "https://www.pexels.com/photo/close-up-of-silver-and-golden-jewelry-13595442/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 9,
+    "product_name": "Loom-woven cotton runner",
+    "photo_id": 9657060,
+    "source_page": "https://www.pexels.com/photo/hanging-wicker-baskets-with-woven-macrame-on-wooden-wall-9657060/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "approximate"
+  },
+  {
+    "product_id": 10,
+    "product_name": "Carved oak bookend",
+    "photo_id": 16820437,
+    "source_page": "https://www.pexels.com/photo/a-handmade-macrame-hanging-on-the-wall-16820437/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "approximate"
+  },
+  {
+    "product_id": 11,
+    "product_name": "Speckled stoneware bowl",
+    "photo_id": 7119222,
+    "source_page": "https://www.pexels.com/photo/ceramic-vases-on-a-white-surface-7119222/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "category"
+  },
+  {
+    "product_id": 12,
+    "product_name": "Soft linen table cloth",
+    "photo_id": 6476112,
+    "source_page": "https://www.pexels.com/photo/blank-paper-and-ceramic-vases-6476112/",
+    "source": "Pexels",
+    "usage": "Editorial demo image; not an image of the named seller inventory",
+    "visual_match": "approximate"
+  }
+]

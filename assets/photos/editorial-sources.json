@@ -1,0 +1,98 @@
+[
+  {
+    "name": "maker-workshop",
+    "folder": "makers",
+    "photo_id": 6634211,
+    "description": "Potter hands shaping clay on a wheel",
+    "source_page": "https://www.pexels.com/photo/potter-s-hands-shaping-clay-on-a-wheel-34230986/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "ceramics",
+    "folder": "categories",
+    "photo_id": 5598279,
+    "description": "Still life ceramic vases",
+    "source_page": "https://www.pexels.com/photo/a-close-up-shot-of-ceramic-vases-5598279/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "textiles",
+    "folder": "categories",
+    "photo_id": 6634560,
+    "description": "Hands weaving textiles on loom",
+    "source_page": "https://www.pexels.com/photo/a-person-weaving-fabric-6634560/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "jewelry",
+    "folder": "categories",
+    "photo_id": 9430468,
+    "description": "Silver jewelry arrangements",
+    "source_page": "https://www.pexels.com/photo/close-up-shot-of-silver-jewelries-9430468/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "home-objects",
+    "folder": "categories",
+    "photo_id": 20130580,
+    "description": "Handmade wooden decor",
+    "source_page": "https://www.pexels.com/photo/wooden-decoration-pieces-on-table-20130580/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "hero-poster",
+    "folder": "heroes",
+    "photo_id": 31493661,
+    "description": "Handmade ceramic still life for hero artwork",
+    "source_page": "https://www.pexels.com/photo/31493661/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "hero-small",
+    "folder": "heroes",
+    "photo_id": 28486205,
+    "description": "Handmade woven textile detail for hero accent",
+    "source_page": "https://www.pexels.com/photo/28486205/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "artisan-studio",
+    "folder": "artisan",
+    "photo_id": 6634458,
+    "description": "Potter shaping clay in studio",
+    "source_page": "https://www.pexels.com/photo/selective-focus-photo-of-a-man-shaping-clay-6611361/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "artisan-story",
+    "folder": "artisan",
+    "photo_id": 6634700,
+    "description": "Person doing pottery",
+    "source_page": "https://www.pexels.com/photo/person-doing-pottery-10111544/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "process-material",
+    "folder": "artisan",
+    "photo_id": 33853309,
+    "description": "Close-up of a person making pottery",
+    "source_page": "https://www.pexels.com/photo/close-up-of-a-person-making-pottery-18799054/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "process-form",
+    "folder": "artisan",
+    "photo_id": 6634602,
+    "description": "Artisan crafting clay pot on potter wheel",
+    "source_page": "https://www.pexels.com/photo/artisan-crafting-clay-pot-on-potter-s-wheel-34259426/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  },
+  {
+    "name": "process-finish",
+    "folder": "artisan",
+    "photo_id": 6634749,
+    "description": "Making clay vase",
+    "source_page": "https://www.pexels.com/photo/making-clay-vase-12940646/",
+    "usage": "Editorial stock image used for educational demo; not the named artisan inventory"
+  }
+]

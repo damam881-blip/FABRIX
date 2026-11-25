@@ -2,13 +2,52 @@
 
 FABRIX is a local-first handmade marketplace prototype with a complete static frontend and a FastAPI + SQLite backend. The browser uses the API when it is running and falls back to the original `localStorage` demo when it is not, so opening a page directly from disk still works.
 
-## Run everything
+## Developer setup (fresh clone)
 
-```powershell
+Tested with Python 3.12.10 and Git 2.54.0 on Windows. Use Python 3.12 for the
+closest match to the verified environment. Git is required only to clone the
+repository; the application itself does not need Git at runtime.
+
+The exact three-command quick start, after Python and Git are available and the
+backend packages are already installed, is:
+
+```bash
+git clone https://github.com/damam881-blip/FABRIX.git
+cd FABRIX
 python start.py
 ```
 
-`start.py` checks the bundled photos, installs backend dependencies if needed, seeds demo data, and starts:
+A recommended isolated setup on Windows PowerShell is:
+
+```powershell
+git clone https://github.com/damam881-blip/FABRIX.git
+cd FABRIX
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt -r requirements-dev.txt
+python start.py
+```
+
+Equivalent macOS/Linux commands:
+
+```bash
+git clone https://github.com/damam881-blip/FABRIX.git
+cd FABRIX
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt -r requirements-dev.txt
+python start.py
+```
+
+`start.py` checks the bundled photos and installs runtime dependencies from
+`requirements.txt` only if imports fail. It does not install
+`requirements-dev.txt`, which is needed for tests. The product and editorial
+photos are committed, so no download is required for startup; the download
+scripts only refresh missing files. A new `data/fabrix.db` is created and seeded
+automatically on first startup. Seeding is idempotent and does not duplicate
+demo users or products on later runs.
+
+`start.py` seeds demo data and starts:
 
 | Service | URL | Purpose |
 | --- | --- | --- |
@@ -107,19 +146,54 @@ Downloads require internet once. Every source photo in the registry is unique; i
 
 ## Tests and verification
 
+Install test dependencies once, then run database-dependent suites sequentially:
+
 ```powershell
-python -m compileall -q backend scripts start.py
+python -m pip install -r requirements-dev.txt
+python -m compileall -q backend tests scripts start.py
 python scripts/verify_assets.py
-python -m pytest tests/test_api.py -q
+python -m pytest -q
+python -m pytest tests/test_upload_lifecycle.py -q
+python -m pytest tests/test_sqlite_concurrency.py -q
+python scripts/validate_db_copy.py data/fabrix.db "$env:TEMP/fabrix-validation.db"
 ```
 
-`tests/test_api.py` covers registration/login, seeded catalog order, favorites, cart sync, reservation, checkout and idempotency, seller transitions, verified reviews, recommendations, admin stats, and ownership scoping.
+macOS/Linux equivalents use `python3` and a temporary path such as
+`/tmp/fabrix-validation.db`. Do not run two pytest processes at the same time;
+they share a temporary test database. `tests/test_api.py` covers
+registration/login, seeded catalog order, frontend page serving, favorites,
+cart sync, reservation, checkout and idempotency, seller transitions, verified
+reviews, recommendations, admin stats, and ownership scoping.
+`tests/test_upload_lifecycle.py` covers reference-safe upload replacement and
+cleanup. `tests/test_sqlite_concurrency.py` covers SQLite write behavior.
 
 ## Local data and configuration
 
-- SQLite database: `data/fabrix.db` (created/seeded automatically)
+- SQLite database: `data/fabrix.db` (created/seeded automatically on first startup; ignored by Git)
 - Configuration: `.env` (copy `.env.example`); override database URL, secret key, token lifetime, and allowed frontend origins there
 - The schema uses SQLAlchemy, so the same models can be pointed at MySQL/PostgreSQL later without rewriting the routers
+
+To keep a fresh clone completely isolated from an existing database, set an
+absolute SQLite URL before starting the app:
+
+```powershell
+$env:FABRIX_DATABASE_URL = 'sqlite:///C:/path/to/fabrix-dev.db'
+python start.py
+```
+
+On macOS/Linux:
+
+```bash
+export FABRIX_DATABASE_URL='sqlite:////tmp/fabrix-dev.db'
+python start.py
+```
+
+Stop the app by pressing `Ctrl+C` in the terminal running `start.py`; it
+terminates both the API and the legacy static server.
+
+The demo credentials above are local-only demonstration accounts and are not
+production credentials. Do not put real secrets in `.env` and commit it; only
+`.env.example` is tracked.
 
 ## Notes
 

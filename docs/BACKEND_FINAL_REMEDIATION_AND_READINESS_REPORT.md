@@ -1,5 +1,12 @@
 # FABRIX Final Backend Remediation and Readiness Report
 
+> Historical status notice: this report records the state at its original
+> remediation pass. Later verified work supersedes its readiness decisions and
+> several “open” items, especially upload lifecycle and recommendation privacy,
+> retention, snapshots, and impression handling. For current status see
+> `docs/FABRIX_FINAL_BLOCKERS_REMEDIATION_REPORT.md` and
+> `docs/RECOMMENDATION_DATA_FOUNDATION.md`.
+
 ## A. Executive summary
 
 This final pass re-inspected the current FastAPI/SQLAlchemy implementation,
@@ -26,11 +33,13 @@ The pass fixed additional defects found during re-audit, including:
 The existing SQLite architecture was retained. No deployment, remote push,
 commit, real payment, external AI service, or database replacement occurred.
 
-The final evidence is strong for the implemented local controls, but the
-backend is **not fully ready** for production or recommendation-system
+At this pass, the final evidence was strong for the implemented local controls,
+but the backend was **not fully ready** for production or recommendation-system
 implementation because fixed-precision storage, a complete versioned migration
 workflow, complete payment reconciliation, and recommendation privacy
-retention/deletion controls remain incomplete.
+retention/deletion controls were incomplete. Later passes resolved integer-cent
+storage and the recommendation privacy controls; current status is in
+`docs/FABRIX_FINAL_BLOCKERS_REMEDIATION_REPORT.md`.
 
 ## Database protection and migration evidence
 
@@ -100,10 +109,10 @@ active_fk_check []
 | F-027 | Audit coverage was incomplete. | PARTIALLY FIXED | `backend/services.py`, order/product/store/review routers | Core financial, order, status, store, and review actions are audited; immutable comprehensive audit coverage remains. |
 | F-028 | Monetary values used floating-point database columns/calculation. | PARTIALLY FIXED | `backend/utils.py`, cart/order routers, `backend/models.py` | Decimal-based calculation/rounding and nonnegative integrity checks added, but existing storage columns remain `Float`; fixed-precision storage migration is still required. |
 | F-029 | Collection reads were unbounded or inefficient. | PARTIALLY FIXED | order/review/favorite/reservation/recommendation/seller routers | Bounded limits and indexes exist; product filtering still materializes the catalog and broader query optimization remains. |
-| F-030 | Upload ownership/orphan lifecycle was incomplete. | PARTIALLY FIXED | `backend/routers/products.py`, `backend/models.py` | Generated safe paths and failed-commit cleanup added; persistent upload metadata/orphan reconciliation remains. |
+| F-030 | Upload ownership/orphan lifecycle was incomplete. | PARTIALLY FIXED at this pass; later fixed | `backend/routers/products.py`, `backend/models.py` | Generated safe paths and failed-commit cleanup added; persistent metadata and reference-safe orphan reconciliation were implemented in a later verified pass. |
 | F-031 | Client could submit uncontrolled recommendation event types. | FIXED AND VERIFIED | `backend/schemas.py`, `backend/routers/recommendations.py`, tests | Canonical literal taxonomy and server validation; client purchase-event test passed. |
 | F-032 | Purchase events were client-forgeable/not tied to checkout. | FIXED AND VERIFIED | `backend/routers/orders.py`, `backend/routers/recommendations.py`, tests | Checkout creates server-side purchase events in the transaction; client purchase rejected. |
-| F-033 | Event provenance, deduplication, and consent context were insufficient. | PARTIALLY FIXED | `backend/models.py`, `backend/db.py`, `backend/routers/recommendations.py`, tests | Event IDs, timestamps, source/request/model/position/consent fields and conflict handling added; retention/deletion remains. |
+| F-033 | Event provenance, deduplication, and consent context were insufficient. | PARTIALLY FIXED at this pass; later completed for local scope | `backend/models.py`, `backend/db.py`, `backend/routers/recommendations.py`, tests | Event IDs, timestamps, source/request/model/position/consent fields and conflict handling added; retention/deletion were implemented in a later verified pass. |
 | F-034 | Recommendation eligibility could include unavailable/suspended products. | FIXED AND VERIFIED for serving | `backend/services.py`, recommendation/product/cart/order routers, tests | Approved active store, active owner, published, and available-stock predicate is shared. Suspended-store test passed. |
 | F-035 | Authentication abuse and privileged-session controls were incomplete. | PARTIALLY FIXED | `backend/routers/auth.py`, `backend/security.py`, tests | JWT expiration validation, password byte-boundary validation, and failed-login throttling added; MFA, password recovery, token revocation, and distributed rate limiting remain. |
 | F-036 | Production operational controls were not implemented. | DEFERRED WITH JUSTIFICATION | `backend/config.py`, docs | Local project scope has no deployment/monitoring/credential service. Deployment was explicitly prohibited; production controls remain a graduation blocker. |
@@ -191,9 +200,11 @@ Implemented foundation controls:
 - Shared approved-store/active-owner/published/stock eligibility.
 - No recommendation endpoint exposes another user’s private event history.
 
-The foundation is not yet ready for recommendation implementation because
-retention/deletion workflows, dataset lineage/snapshots, formal impression
-acknowledgment, and privacy-reviewed training exclusion controls remain open.
+At this report's original pass, retention/deletion workflows, dataset
+lineage/snapshots, and formal impression acknowledgment were open. These were
+implemented in later verified passes; privacy-reviewed training export and full
+snapshot reproducibility remain future work. See
+`docs/RECOMMENDATION_DATA_FOUNDATION.md` for the current status.
 
 ## G. Exact test evidence
 
@@ -221,10 +232,12 @@ No Git commit hash is available because the workspace is not a Git checkout.
    transitions are not implemented.
 4. **Authentication lifecycle**: MFA, password reset/recovery, token
    revocation, and distributed rate limiting are not implemented.
-5. **Upload lifecycle**: upload metadata ownership, retention, and orphan
-   cleanup are not implemented.
-6. **Recommendation privacy lifecycle**: event deletion, retention limits,
-   dataset snapshots, lineage, and training exclusion are not implemented.
+5. **Upload lifecycle at this pass**: upload metadata ownership, retention,
+   and orphan cleanup were open; later verified work implemented reference-safe
+   replacement and cleanup.
+6. **Recommendation privacy lifecycle at this pass**: event deletion, retention
+   limits, and basic snapshots were open; later verified work implemented them.
+   Full lineage and privacy-reviewed training export remain future work.
 7. **Collection performance**: capped limits are present, but product
    filtering still materializes records in Python and recommendation scoring
    contains an N+1 lookup pattern.
@@ -238,6 +251,8 @@ was used to claim success.
 
 ## Final readiness decisions
 
+Historical decisions at this pass:
+
 1. **Backend Security and Integrity Readiness: NOT READY**
    - High-risk authorization and SQLite integrity controls are verified, but
      fixed-precision storage, payment lifecycle completeness, and several
@@ -248,3 +263,8 @@ was used to claim success.
      incomplete.
 3. **Recommendation System Implementation Readiness: NOT APPROVED TO START**
    - The two prerequisite readiness decisions are not both READY.
+
+Current decisions are recorded in
+`docs/FABRIX_FINAL_BLOCKERS_REMEDIATION_REPORT.md`: local backend READY,
+recommendation data foundation READY, recommendation implementation APPROVED TO
+START for local scope, and production NOT READY.

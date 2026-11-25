@@ -1,5 +1,11 @@
 # FABRIX Backend Remediation Final Report
 
+> Historical status notice: findings below reflect this report's original pass.
+> Later verified work resolved the upload lifecycle and recommendation
+> deletion/retention/impression gaps. See
+> `docs/FABRIX_FINAL_BLOCKERS_REMEDIATION_REPORT.md` and
+> `docs/RECOMMENDATION_DATA_FOUNDATION.md` for current status.
+
 ## Scope and safety
 
 This report covers the authorized backend/database remediation pass. Work was
@@ -67,11 +73,11 @@ remain follow-up work.
 | F-027 | Partially remediated | Audit coverage exists for core order/store/review actions; comprehensive immutable audit coverage remains follow-up work. |
 | F-028 | Open follow-up | Money fields still use floating-point storage; fixed-precision migration requires a reviewed conversion plan. |
 | F-029 | Open follow-up | Broad pagination and query optimization across all collection endpoints remain. |
-| F-030 | Open follow-up | Upload ownership tracking and orphan cleanup remain. |
+| F-030 | Open at this pass; later fixed | Upload ownership tracking and orphan cleanup were open; later verified work made replacement and cleanup reference-safe and retryable. |
 | F-031 | Remediated | Recommendation event types are controlled and client purchase events are rejected. |
 | F-032 | Remediated | Server-side purchase events include provenance and consent snapshots. |
-| F-033 | Partially remediated | Recommendation events now carry timestamps, source, request, model, position, and consent context; deletion/retention workflows remain. |
-| F-034 | Partially remediated | Recommendation serving filters out ineligible products; complete impression acknowledgment and dataset lineage remain. |
+| F-033 | Partially remediated at this pass | Recommendation events now carry timestamps, source, request, model, position, and consent context; deletion/retention were later implemented. |
+| F-034 | Partially remediated at this pass | Recommendation serving filters out ineligible products; API-level impression acknowledgment and basic dataset lineage were later implemented. |
 | F-035 | Open follow-up | MFA, rate limiting, password recovery, and privileged-session controls remain. |
 | F-036 | Open follow-up | Production operational controls, monitoring, backups/restore drills, and deployment-specific secrets management remain. |
 
@@ -85,11 +91,11 @@ fabricated.
 
 ## Recommendation readiness decision
 
-Recommendation algorithms remain deferred. The event schema and eligibility
-predicate are materially safer and provide a trusted foundation, but model
-training should wait for retention/deletion controls, dataset lineage,
-impression/click validation, and privacy review documented in
-`docs/RECOMMENDATION_DATA_FOUNDATION.md`.
+Recommendation algorithms remain deferred. At this pass the event schema and
+eligibility predicate were materially safer but retention/deletion, dataset
+lineage, and impression acknowledgment were still open. Those controls were
+implemented in later verified passes; current status and remaining future work
+are documented in `docs/RECOMMENDATION_DATA_FOUNDATION.md`.
 
 ## Next approved work
 
